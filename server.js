@@ -1,4 +1,10 @@
+// server.js
+// gateway server of the game
+
 var net = require('net');
+
+// Global
+var buffers = {}
 
 var server = net.createServer();
 
@@ -6,28 +12,58 @@ server.on('connection', onClientConnect).listen(1234);
 
 function onClientConnect (sock) {
 
+	buffers[sock.remoteAddress + sock.remotePort] = ''
+
 	// Emitted when data is received
-	sock.on('data', onClientData);
+	sock.on('data', function (data) {
+
+		if (data.length <= 0)
+			return 
+	
+		var dataStr = data.toString();
+		var originLength = dataStr.length;
+		if (originLength <= 0)
+			return
+		
+		// Delimited with '*'
+		jsonStrs = dataStr.slice(0, originLength - 2).split('*')
+		
+		// subpackage
+		var key = sock.remoteAddress + sock.remotePort;
+		for (var i = 0; i < jsonStrs.length; i++) {
+			if (jsonStrs[i] != '') {
+				if (i == 0 &&
+					jsonStrs[i][0] != '{' && 
+					buffers[key] != '') {
+					var tmp = buffers[key] + jsonStrs[i]
+					if (tmp[tmp.length - 1] == '}') {
+						// it is a completed json string
+						// TODO : pass it to the router
+						// console.log('-------' + tmp)
+						buffers[key] = ''
+						continue;
+					}
+					else {
+						// uncompleted json string, append to the end of the buffer
+						buffers[key] = tmp
+						break;
+					}
+				}
+				if (i == jsonStrs.length - 1 && 
+					buffers[key] == '') {
+					var last = jsonStrs[i].length - 1;
+					if (jsonStrs[i][last] != '}') {
+						// an uncompleted json string, write to the buffer
+						buffers[key] = jsonStrs[i]
+						continue;
+					}
+				}
+				// console.log('-------' + jsonStrs[i])
+				// TODO : pass it to the router
+			}
+		}
+	
+		}
+	);
 
 }
-
-function onClinetData (data) {
-
-}
-
-var handlers = {
-	name 	: createPlayer,
-	touch 	: playerTouch, 
-}
-
-// When a new player enter his name
-function createPlayer (id, name) {
-
-	// TODO : allocate user id
-
-	// TODO : create new player at all clients
-
-}
-
-// When a player touch the screen
-function playerTouch (id, touch) {}
