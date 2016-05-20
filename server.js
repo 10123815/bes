@@ -1,45 +1,51 @@
-// server.js
-// gateway server of the game
+//////////////// server.js /////////////////
+/////// gateway server of the game /////////
 
+////////////////// import //////////////////
 var net = require('net');
+var route = require('./router').route;
 
-// Global
+////////////////// Global //////////////////
 var buffers = {}
 
 var server = net.createServer();
 
 server.on('connection', onClientConnect).listen(1234);
 
-function onClientConnect (sock) {
+// When new user connect.
+function onClientConnect(sock) {
 
-	buffers[sock.remoteAddress + sock.remotePort] = ''
-
+	// use the 'address:port' as the key
+	var key = sock.remoteAddress + sock.remotePort;
+	if (!(key in buffers)) {
+		buffers[key] = ''
+	}
+	
 	// Emitted when data is received
 	sock.on('data', function (data) {
 
 		if (data.length <= 0)
-			return 
-	
+			return
+
 		var dataStr = data.toString();
 		var originLength = dataStr.length;
 		if (originLength <= 0)
 			return
-		
+
 		// Delimited with '*'
-		jsonStrs = dataStr.slice(0, originLength - 2).split('*')
-		
+		jsonStrs = dataStr.slice(0, originLength - 2).split('*');
+
 		// subpackage
 		var key = sock.remoteAddress + sock.remotePort;
 		for (var i = 0; i < jsonStrs.length; i++) {
 			if (jsonStrs[i] != '') {
 				if (i == 0 &&
-					jsonStrs[i][0] != '{' && 
+					jsonStrs[i][0] != '{' &&
 					buffers[key] != '') {
 					var tmp = buffers[key] + jsonStrs[i]
 					if (tmp[tmp.length - 1] == '}') {
-						// it is a completed json string
-						// TODO : pass it to the router
-						// console.log('-------' + tmp)
+						// it is a completed json string, pass it to the router
+						route(tmp);
 						buffers[key] = ''
 						continue;
 					}
@@ -49,7 +55,7 @@ function onClientConnect (sock) {
 						break;
 					}
 				}
-				if (i == jsonStrs.length - 1 && 
+				if (i == jsonStrs.length - 1 &&
 					buffers[key] == '') {
 					var last = jsonStrs[i].length - 1;
 					if (jsonStrs[i][last] != '}') {
@@ -58,12 +64,12 @@ function onClientConnect (sock) {
 						continue;
 					}
 				}
-				// console.log('-------' + jsonStrs[i])
-				// TODO : pass it to the router
+				// Pass it to the router
+				route(jsonStrs[i])
 			}
 		}
-	
-		}
+
+	}
 	);
 
 }
