@@ -3,16 +3,20 @@
 
 ////////////////// import //////////////////
 var net = require('net');
-var route = require('./router').route;
+var Scene = require('./scene').Scene;
 
 ////////////////// Global //////////////////
-var buffers = {}
+var buffers = {};
+var gameScene = new Scene();
 
+// main() of the app
 var server = net.createServer();
 
 server.on('connection', onClientConnect).listen(1234);
 
-// When new user connect.
+/**
+ * When new user connect.
+ */
 function onClientConnect(sock) {
 
 	// use the 'address:port' as the key
@@ -23,18 +27,18 @@ function onClientConnect(sock) {
 	
 	// Emitted when data is received
 	sock.on('data', function (data) {
-
+	
 		if (data.length <= 0)
 			return
-
+		
 		var dataStr = data.toString();
 		var originLength = dataStr.length;
 		if (originLength <= 0)
 			return
-
+		
 		// Delimited with '*'
 		jsonStrs = dataStr.slice(0, originLength - 2).split('*');
-
+	
 		// subpackage
 		var key = sock.remoteAddress + sock.remotePort;
 		for (var i = 0; i < jsonStrs.length; i++) {
@@ -68,8 +72,37 @@ function onClientConnect(sock) {
 				route(jsonStrs[i])
 			}
 		}
-
+	
 	}
 	);
 
+}
+
+/**
+ * Forward data to another logic modules
+ */
+function route (data) {
+
+	var jsonObj = JSON.parse(data);
+    
+    /*
+        ** package structure
+        ** {"msgtype":"name", "name":---} client->server
+        ** {"msgtype":"touch", "id":---, "posx":---, "poxy":---} client->server
+    */
+    
+    if ('msgtype' in jsonObj) {
+        // route to logic modules
+        if (jsonObj.msgtype == 'name') {
+            // server received the new user's name
+            var playerId = gameScene.addPlayer(name);
+        }
+		else if (jsonObj.msgtype == 'touch') {
+			// usesr touch the screen to move
+			
+		} else {
+			
+		}
+    }
+    
 }
