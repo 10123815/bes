@@ -1,7 +1,12 @@
-/////////////////// common.js ///////////////////
+/**
+ * @fileoverview Utility class for this app.
+ * @author ysd
+ */
 
 /**
- * Create 2d vector
+ * Create 2d vector.
+ * @param {Number} x X element of the vector.
+ * @param {Nunber} y Y element of the vector.
  */
 function Vector2 (x, y) {
 	this.x = x || 0
@@ -9,14 +14,14 @@ function Vector2 (x, y) {
 }
 
 /**
- * Length of the 2d vector
+ * Length of the 2d vector.
  */
 Vector2.prototype.length = function () {
 	return Math.sqrt(this.x * this.x + this.y * this.y)
 }
 
 /**
- * Normalize the 2d vector
+ * Normalize the 2d vector.
  */
 Vector2.prototype.normalize = function () {
 	len = this.length()
@@ -25,10 +30,16 @@ Vector2.prototype.normalize = function () {
 
 exports.Vector2 = Vector2
 
+/**
+ * Add two Vector2.
+ */
 exports.vector2Add = function (a, b) {
 	return new Vector2(a.x + b.x, a.y + b.y)
 }
 
+/**
+ * Minus one Vector2 from another.
+ */
 exports.vector2Minus = function (a, b) {
 	return new Vector2(a.x - b.x, a.y - b.y)
 }
@@ -63,7 +74,7 @@ exports.vector2Dot = function (a, b) {
 }
 
 /**
- * The parameter t is clamped to the range [0, 1].
+ * Linearly interpolates between two Vector2s by t.
  * When t = 0 returns a. 
  * When t = 1 return b. 
  * When t = 0.5 returns the midpoint of a and b.
