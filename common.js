@@ -102,3 +102,8 @@ exports.vector2Reflect = function (light, norm) {
 	var ref = new Vector2(v * norm.x - light.x, v * norm.y - light.y)
 	return ref.normalize()
 }
+
+/**
+ * Zero vector.
+ */
+exports.Zero2 = new Vector2(0, 0);
