@@ -1,21 +1,31 @@
-//////////////// server.js /////////////////
-/////// gateway server of the game /////////
+/**
+ * @fileoverview main.js for this app.
+ * @author ysd
+ */
 
-////////////////// import //////////////////
 var net = require('net');
 var Scene = require('./scene').Scene;
 
-////////////////// Global //////////////////
+/**
+ * Buffer for the sub package problem.
+ */
 var buffers = {};
+
+/**
+ * Game scene.
+ */
 var gameScene = new Scene();
 
-// main() of the app
+/**
+ * App entry.
+ */
 var server = net.createServer();
 
 server.on('connection', onClientConnect).listen(1234);
 
 /**
  * When new user connect.
+ * @param {Socket} sock The connection object.
  */
 function onClientConnect(sock) {
 
@@ -79,7 +89,8 @@ function onClientConnect(sock) {
 }
 
 /**
- * Forward data to another logic modules
+ * Forward data to another logic modules.
+ * @param {string} data Received data from clients.
  */
 function route (data) {
 
@@ -99,7 +110,7 @@ function route (data) {
         }
 		else if (jsonObj.msgtype == 'touch') {
 			// usesr touch the screen to move
-			
+			gameScene.playerMoveTo(jsonObj.id, jsonObj.posx, jsonObj.poxy);
 		} else {
 			
 		}
