@@ -3,7 +3,6 @@
  * @author ysd
  */
 
-
 var common = require('./common');
 var define = require('./define');
 
@@ -60,10 +59,10 @@ Player.prototype.moveTo = function (destination) {
 		if (distance > 0.1) {
 			
 			if (distance > this.speed) {
-				// accelarate
+				// accelerate
 				movement = common.vector2Lerp(movement, targetMovement, 0.5);
 			} else {
-				// decelarate
+				// decelerate
 				movement = common.vector2Lerp(movement, common.Zero2);
 			}
 			
