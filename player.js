@@ -25,7 +25,7 @@ function Player(name) {
 	/**
 	 * Radius of the circle. It need to be synchronized to all clients.
 	 */
-	this.radius = 1
+	this.radius = 2
 
 	/**
 	 * Center of the circle. It need to be synchronized to all clients.
@@ -36,14 +36,23 @@ function Player(name) {
 	 * Player's move speed per second.
 	 */
 	this.speed = 1;
+	
+	/**
+	 * Init fielf of aoi. It must big than the field of view by speed.
+	 */
+	this.scope = [16, 9];
 
+}
+
+Player.prototype.eat = function (foodRadius, onPlayerEat) {
+	// Grow when player eat another player.
 }
 
 /**
  * Player move to a point.
  * @param {Vector2} destination Destination point.
  */
-Player.prototype.moveTo = function (destination) {
+Player.prototype.moveTo = function (destination, onPlayerMove) {
 
 	var movement = new Vector2(0, 0);
 	var spd = this.speed * define.DELTA_TIME;
@@ -68,9 +77,8 @@ Player.prototype.moveTo = function (destination) {
 			
 			// update position
 			this.position = common.vector2Add(this.position, movement);
-
-			// TODO : boardcast new position to all clients to tell clients the position after 0.1 second
-
+			onPlayerMove(this.id, this.position);
+			
 			// schedule the next move after 1 second
 			setTimeout(function () {
 				this.doMoveTo(destination);
