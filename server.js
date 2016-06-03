@@ -19,9 +19,11 @@ var gameScene = new Scene();
 /**
  * App entry.
  */
-var server = net.createServer();
+exports.start = function () {
+	var server = net.createServer();
+	server.on('connection', onClientConnect).listen(1234);
+}
 
-server.on('connection', onClientConnect).listen(1234);
 
 /**
  * When new user connect.
@@ -34,21 +36,21 @@ function onClientConnect(sock) {
 	if (!(key in buffers)) {
 		buffers[key] = ''
 	}
-	
+
 	// Emitted when data is received
 	sock.on('data', function (data) {
-	
+
 		if (data.length <= 0)
 			return
-		
+
 		var dataStr = data.toString();
 		var originLength = dataStr.length;
 		if (originLength <= 0)
 			return
-		
+
 		// Delimited with '*'
 		jsonStrs = dataStr.slice(0, originLength - 2).split('*');
-	
+
 		// subpackage
 		var key = sock.remoteAddress + sock.remotePort;
 		for (var i = 0; i < jsonStrs.length; i++) {
@@ -82,9 +84,11 @@ function onClientConnect(sock) {
 				route(jsonStrs[i])
 			}
 		}
-	
+
 	}
 	);
+
+	sock.on('close', function () { });
 
 }
 
@@ -92,28 +96,28 @@ function onClientConnect(sock) {
  * Forward data to another logic modules.
  * @param {string} data Received data from clients.
  */
-function route (data) {
+function route(data) {
 
 	var jsonObj = JSON.parse(data);
-    
+
     /*
         ** package structure
-        ** {"msgtype":"name", "name":---} client->server
-        ** {"msgtype":"touch", "id":---, "posx":---, "poxy":---} client->server
+        ** {"msgtype":"name", "name":"---"} client->server
+        ** {"msgtype":"touch", "id":"---", "posx":"---", "poxy":"---"} client->server
     */
-    
+
     if ('msgtype' in jsonObj) {
         // route to logic modules
         if (jsonObj.msgtype == 'name') {
             // server received the new user's name
-            var playerId = gameScene.addPlayer(name);
+            var playerId = gameScene.addPlayer(jsonObj.name);
         }
 		else if (jsonObj.msgtype == 'touch') {
 			// usesr touch the screen to move
 			gameScene.playerMoveTo(jsonObj.id, jsonObj.posx, jsonObj.poxy);
 		} else {
-			
+
 		}
     }
-    
+
 }
