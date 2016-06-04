@@ -1,10 +1,11 @@
 /**
- * @fileoverview main.js for this app.
+ * @fileoverview Gateway of the game. It receive requests and forward to another modules.
  * @author ysd
  */
 
 var net = require('net');
 var Scene = require('./scene').Scene;
+var MAX_PLAYER = require('./define').MAX_PLAYER;
 
 /**
  * Buffer for the sub package problem.
@@ -12,18 +13,28 @@ var Scene = require('./scene').Scene;
 var buffers = {};
 
 /**
- * Game scene.
+ * Socket list. {id: Socket}
  */
-var gameScene = new Scene();
+var socks = {};
 
 /**
  * App entry.
  */
-exports.start = function () {
-	var server = net.createServer();
-	server.on('connection', onClientConnect).listen(1234);
-}
+var gameScene = new Scene();
+var server = net.createServer();
+server.on('connection', onClientConnect).listen(1234);
+gameScene.start(send);
 
+/**
+ * Send data to a client.
+ * @param {Number} id ID of the client to map his socket.
+ * @param {string} data Json string to send.
+ */
+function send(id, data) {
+	if (id in socks) {
+		socks[id].write(data);
+	}
+}
 
 /**
  * When new user connect.
@@ -61,7 +72,7 @@ function onClientConnect(sock) {
 					var tmp = buffers[key] + jsonStrs[i]
 					if (tmp[tmp.length - 1] == '}') {
 						// it is a completed json string, pass it to the router
-						route(tmp);
+						route(tmp, sock);
 						buffers[key] = ''
 						continue;
 					}
@@ -81,14 +92,14 @@ function onClientConnect(sock) {
 					}
 				}
 				// Pass it to the router
-				route(jsonStrs[i])
+				route(jsonStrs[i], sock);
 			}
 		}
 
 	}
 	);
 
-	sock.on('close', function () { });
+	
 
 }
 
@@ -96,14 +107,14 @@ function onClientConnect(sock) {
  * Forward data to another logic modules.
  * @param {string} data Received data from clients.
  */
-function route(data) {
+function route(data, sock) {
 
 	var jsonObj = JSON.parse(data);
 
     /*
         ** package structure
-        ** {"msgtype":"name", "name":"---"} client->server
-        ** {"msgtype":"touch", "id":"---", "posx":"---", "poxy":"---"} client->server
+        ** {"msgtype":"name", "name":"ysd"} client->server
+        ** {"msgtype":"touch", "id":"1000", "posx":"0", "poxy":"0"} client->server
     */
 
     if ('msgtype' in jsonObj) {
@@ -111,12 +122,23 @@ function route(data) {
         if (jsonObj.msgtype == 'name') {
             // server received the new user's name
             var playerId = gameScene.addPlayer(jsonObj.name);
+			if (playerId <= MAX_PLAYER && playerId > 0) {
+				socks[playerId] = sock;
+				// {"msgtype":"id", "id":"---"}
+				var sendJsonObj = {};
+				sendJsonObj.msgtype = 'id';
+				sendJsonObj.id = playerId;
+				sock.write(JSON.stringify(sendJsonObj));
+			}
         }
 		else if (jsonObj.msgtype == 'touch') {
 			// usesr touch the screen to move
-			gameScene.playerMoveTo(jsonObj.id, jsonObj.posx, jsonObj.poxy);
+			if (jsonObj.id in socks) {
+				console.log(jsonObj);
+				gameScene.playerMoveTo(jsonObj.id * 1, jsonObj.posx * 1, jsonObj.poxy * 1);
+			}
 		} else {
-
+			console.log('Unknow msg type.');
 		}
     }
 
