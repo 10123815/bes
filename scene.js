@@ -5,6 +5,7 @@
 
 var Player = require('./player').Player;
 var MAX_PLAYER = require('./define').MAX_PLAYER;
+var DELTA_TIME = require('./define').DELTA_TIME;
 var Vector2 = require('./common').Vector2;
 var aoi_st = require('./aoi_st');
 
@@ -25,6 +26,11 @@ var players = new Map();
 var validId = []
 
 /**
+ * Position/size/... update list.
+ */
+var positionUpdateList = new Set();
+
+/**
  * Game scene. A 2d square.
  */
 function Scene() {
@@ -34,7 +40,7 @@ function Scene() {
 	this.height = 100;
 
 	// This is the logic frame rate in the server.
-	this.frameRate = 100;
+	this.frameRate = DELTA_TIME;
 
 	for (var index = 0; index < MAX_PLAYER; index++) {
 		validId.push(index + 1);
@@ -45,16 +51,19 @@ function Scene() {
 /**
  * Start the game main loop.
  */
-Scene.prototype.startGame = function () {
-	this.update();
+Scene.prototype.start = function (send) {
+	this.update(send);
 }
 
 /**
  * Update game stat for every 100ms.
  */
-Scene.prototype.update = function () {
+Scene.prototype.update = function (send) {
 	setTimeout(this.update, this.frameRate);
 
+	// TODO(ysd): Collision detection.
+
+	// Broadcast message.
 	players.forEach(function (id, player, map) {
 		var x1 = player.position.x - player.scope.x / 2;
 		var x2 = x1 + player.scope.x;
@@ -64,30 +73,60 @@ Scene.prototype.update = function () {
 
 		/**
 		 * Construct a json string:
-		 * {"msgtype":"position", "data": [
+		 * {"msgtype":"sync", 
+		 *  "position": [
 		 		{ "id":"---" , "posx":"---" , "posy":"---" },
 		 		{ "id":"---" , "posx":"---" , "posy":"---" },
 		 		{ "id":"---" , "posx":"---" , "posy":"---" }
-		 		]
+		 	],
+			"size": [
+				{ "id":"---" , "size":"---" }
+			]
 			}
 		*/
-		var jsonStr = '{"msgtype":"position", "data":';
-		var objArr = new Array(observed.length);
+		var jsonStr = '{"msgtype":"sync",';
+
+		// position synchronize.
+		var m = 0;
+		var positionSyncArr = [];
+
+		// size synchronize
+		var n = 0;
+		var sizeSyncArr = [];
+
 		for (var i = 0, l = observed.length; i < l; i++) {
-			var obj = {};
 			var id = observed[i];
-			obj.id = id;
-			var player = players.get(id);
-			obj.posx = player.position.x;
-			obj.posy = player.position.y;
-			objArr[i] = obj;
+			// Some of the observed have not moved yet.
+			// Check if the player of id is moved.
+			if (positionUpdateList.has(id)) {
+				var obj = {};
+				obj.id = id;
+				var player = players.get(id);
+				obj.posx = player.position.x;
+				obj.posy = player.position.y;
+				positionSyncArr[m++] = obj;
+				positionUpdateList.delete(id);
+			}
+			// TODO(ysd): Check if some player is bigger.
 		}
-		jsonStr += JSON.stringify(objArr) + '}';
+		jsonStr += '"position":' + JSON.stringify(positionSyncArr) + ','
+			+ '"size":' + JSON.stringify(sizeSyncArr)
+			+ '}';
 
 		// If the client has not spawn the a player yet, it spawn first and do not move.
-		// TODO(ysd): send to clients.
+		send(id, jsonStr);
 	}
 	);
+}
+
+/**
+ * Allocate a position for a new player.
+ * @return {Vector2}
+ */
+Scene.prototype.allocatePosition = function () {
+	var x = Math.random() * this.width;
+	var y = Math.random() * this.height;
+	return new Vector2(x, y);
 }
 
 /**
@@ -112,16 +151,15 @@ Scene.prototype.addPlayer = function (name) {
 		var id = validId.pop();
 
 	newPlayer.id = id;
-	newPlayer.position = allocatePosition();
+	newPlayer.position = this.allocatePosition();
 	if (players.has(id))
 		return -1;
 
 	players.set(id, newPlayer);
 
-	// TODO(ysd): Broadcast to all clients to add this new player.
 	aoi_st.insert(id, newPlayer.position.x, newPlayer.position.y);
 
-	// TODO(ysd): Resize the game map.
+	// TODO(ysd): Resize the game map if necessary.
 
 	return id;
 }
@@ -138,19 +176,13 @@ Scene.prototype.removePlayer = function (id) {
  */
 Scene.prototype.playerMoveTo = function (id, x, y) {
 	var destination = new Vector2(x, y);
-	players[id].moveTo(destination, onPlayerMove);
+	players.get(id).moveTo(destination, onPlayerMove);
 }
 
-exports.Scene = Scene
+exports.Scene = Scene;
 
-/**
- * Allocate a position for a new player.
- * @return {Vector2}
- */
-function allocatePosition() {
-	return new Vector2(0, 0)
-}
 
 function onPlayerMove(id, position) {
+	positionUpdateList.add(id);
 	aoi_st.update(id, position.x, position.y);
 }
