@@ -99,7 +99,7 @@ function onClientConnect(sock) {
 	}
 	);
 
-	
+
 
 }
 
@@ -134,7 +134,7 @@ function route(data, sock) {
 		else if (jsonObj.msgtype == 'touch') {
 			// usesr touch the screen to move
 			if (jsonObj.id in socks) {
-				console.log(jsonObj);
+				
 				gameScene.playerMoveTo(jsonObj.id * 1, jsonObj.posx * 1, jsonObj.poxy * 1);
 			}
 		} else {
