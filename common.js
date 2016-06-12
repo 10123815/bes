@@ -8,7 +8,7 @@
  * @param {Number} x X element of the vector.
  * @param {Nunber} y Y element of the vector.
  */
-function Vector2 (x, y) {
+function Vector2(x, y) {
 	this.x = x || 0
 	this.y = y || 0
 }
@@ -24,8 +24,9 @@ Vector2.prototype.length = function () {
  * Normalize the 2d vector.
  */
 Vector2.prototype.normalize = function () {
-	len = this.length()
-	return new Vector2(this.x / len, this.y / len)
+	len = this.length();
+	this.x /= len;
+	this.y /= len;
 }
 
 exports.Vector2 = Vector2
@@ -42,6 +43,13 @@ exports.vector2Add = function (a, b) {
  */
 exports.vector2Minus = function (a, b) {
 	return new Vector2(a.x - b.x, a.y - b.y)
+}
+
+/**
+ * Multiplies a vector by a number.
+ */
+exports.vector2Multi = function (a, m) {
+	return new Vector2(a.x * m, a.y * m);
 }
 
 /**
@@ -74,6 +82,15 @@ exports.vector2Dot = function (a, b) {
 }
 
 /**
+ * Normalize a 2d vector.
+ */
+exports.vector2Normalize = function (a) {
+	var len = a.length();
+	var vec = new Vector2(a.x / len, a.y / len);
+	return vec;
+}
+
+/**
  * Linearly interpolates between two Vector2s by t.
  * When t = 0 returns a. 
  * When t = 1 return b. 
@@ -100,10 +117,17 @@ exports.vector2Reflect = function (light, norm) {
 	norm = norm.normalize()
 	const v = 2 * exports.vector2Dot(light, norm)
 	var ref = new Vector2(v * norm.x - light.x, v * norm.y - light.y)
-	return ref.normalize()
+	return ref.normalize();
+}
+
+/**
+ * Multiplies two vectors component-wise.
+ */
+exports.vector2Scale = function (a, b) {
+	return new Vector2(a.x * b.x, a.y * b.y);
 }
 
 /**
  * Zero vector.
  */
-exports.Zero2 = new Vector2(0, 0);
+exports.Zero = new Vector2(0, 0);
