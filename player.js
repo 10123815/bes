@@ -36,14 +36,23 @@ function Player(name) {
 	/**
 	 * Player's move speed per second.
 	 */
-	this.speed = 5;
+	this.speed = 20;
 
 	/**
 	 * Init fielf of aoi. It must big than the field of view by speed.
 	 */
 	this.scope = [16, 9];
 
+	/**
+	 * Player's position update.
+	 */
 	this.movement = new Vector2(0, 0);
+
+	/**
+	 * Has the player moved/scaled in current logic frame.
+	 */
+	this.moved = false;
+	this.scaled = false;
 
 }
 
@@ -77,6 +86,7 @@ function playerMove(player, destination, onPlayerMove) {
 
 	if (distance > 0.1) {
 
+		player.moved = true;
 		if (distance > spd) {
 			// accelerate
 			player.movement = common.vector2Lerp(player.movement, targetMovement, 0.5);
@@ -97,6 +107,7 @@ function playerMove(player, destination, onPlayerMove) {
 
 	}
 	else {
+		player.moved = false;
 		return;
 	}
 }
