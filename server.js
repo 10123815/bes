@@ -15,7 +15,7 @@ var buffers = {};
 /**
  * Socket list. {id: Socket}
  */
-var socks = {};
+var socks = new Map();
 
 /**
  * App entry.
@@ -24,6 +24,7 @@ var gameScene = new Scene();
 var server = net.createServer();
 server.on('connection', onClientConnect).listen(1234);
 gameScene.start(send);
+console.log('Game start....');
 
 /**
  * Send data to a client.
@@ -31,8 +32,8 @@ gameScene.start(send);
  * @param {string} data Json string to send.
  */
 function send(id, data) {
-	if (id in socks) {
-		socks[id].write(data);
+	if (socks.has(id)) {
+		socks.get(id).write(data);
 	}
 }
 
@@ -115,6 +116,8 @@ function route(data, sock) {
         ** package structure
         ** {"msgtype":"name", "name":"ysd"} client->server
         ** {"msgtype":"touch", "id":"1000", "posx":"0", "poxy":"0"} client->server
+		** {"msgtype":"id", "id":"---"} server->client
+		** {"msgtype":"spawn", "id":"---", "name":"---"} server->client
     */
 
     if ('msgtype' in jsonObj) {
@@ -123,18 +126,29 @@ function route(data, sock) {
             // server received the new user's name
             var playerId = gameScene.addPlayer(jsonObj.name);
 			if (playerId <= MAX_PLAYER && playerId > 0) {
-				socks[playerId] = sock;
-				// {"msgtype":"id", "id":"---"}
 				var sendJsonObj = {};
+
+				// Send to self.
 				sendJsonObj.msgtype = 'id';
 				sendJsonObj.id = playerId;
 				sock.write(JSON.stringify(sendJsonObj));
+
+				// Boradcast to spawn new player in all clients
+				sendJsonObj.msgtype = 'spawn';
+				sendJsonObj.name = jsonObj.name;
+				var jsonStrData = JSON.stringify(sendJsonObj);
+				socks.forEach(function (sock, id, map) {
+					sock.write(jsonStrData);
+				});
+
+				// Add to client sock list.
+				socks.set(playerId, sock);
 			}
         }
 		else if (jsonObj.msgtype == 'touch') {
 			// usesr touch the screen to move
-			if (jsonObj.id in socks) {
-				
+			if (socks.has(jsonObj.id * 1)) {
+				// Convert the string data to number.
 				gameScene.playerMoveTo(jsonObj.id * 1, jsonObj.posx * 1, jsonObj.poxy * 1);
 			}
 		} else {
