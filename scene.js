@@ -23,12 +23,7 @@ var players = new Map();
  * Valid id.
  * @type {Stack}
  */
-var validId = []
-
-/**
- * Position/size/... update list.
- */
-var positionUpdateList = new Set();
+var validId = [];
 
 /**
  * Game scene. A 2d square.
@@ -40,7 +35,7 @@ function Scene() {
 	this.height = 100;
 
 	// This is the logic frame rate in the server.
-	this.frameRate = DELTA_TIME;
+	this.frameRate = DELTA_TIME * 1000;
 
 	for (var index = 0; index < MAX_PLAYER; index++) {
 		validId.push(index + 1);
@@ -52,24 +47,26 @@ function Scene() {
  * Start the game main loop.
  */
 Scene.prototype.start = function (send) {
-	this.update(send);
+	update(send, this.frameRate);
 }
 
 /**
  * Update game stat for every 100ms.
  */
-Scene.prototype.update = function (send) {
-	setTimeout(this.update, this.frameRate);
+function update(send, fr) {
+	setTimeout(function () {
+		update(send, fr);
+	}, fr);
 
 	// TODO(ysd): Collision detection.
 
 	// Broadcast message.
-	players.forEach(function (id, player, map) {
-		var x1 = player.position.x - player.scope.x / 2;
-		var x2 = x1 + player.scope.x;
-		var y1 = player.position.y - player.scope.y / 2;
-		var y2 = y1 + player.scope.y;
-		var observed = aoi_st.search(id, x1, x2, y1, y2);
+	players.forEach(function (player, id, map) {
+		var x1 = player.position.x - player.scope[0] / 2;
+		var x2 = x1 + player.scope[0];
+		var y1 = player.position.y - player.scope[1] / 2;
+		var y2 = y1 + player.scope[1];
+		var observed = aoi_st.search(x1, x2, y1, y2);
 
 		/**
 		 * Construct a json string:
@@ -96,25 +93,28 @@ Scene.prototype.update = function (send) {
 
 		for (var i = 0, l = observed.length; i < l; i++) {
 			var id = observed[i];
+			var player = players.get(id);
 			// Some of the observed have not moved yet.
 			// Check if the player of id is moved.
-			if (positionUpdateList.has(id)) {
+			if (player.moved) {
 				var obj = {};
 				obj.id = id;
-				var player = players.get(id);
 				obj.posx = player.position.x;
 				obj.posy = player.position.y;
 				positionSyncArr[m++] = obj;
-				positionUpdateList.delete(id);
 			}
-			// TODO(ysd): Check if some player is bigger.
-		}
-		jsonStr += '"position":' + JSON.stringify(positionSyncArr) + ','
-			+ '"size":' + JSON.stringify(sizeSyncArr)
-			+ '}';
+			if (player.scaled) {
 
-		// If the client has not spawn the a player yet, it spawn first and do not move.
-		send(id, jsonStr);
+				// TODO(ysd): Check if some player is bigger/smaller.
+			}
+		}
+		if (positionSyncArr.length > 0 || sizeSyncArr.length > 0) {
+			jsonStr += '"position":' + JSON.stringify(positionSyncArr) + ','
+				+ '"size":' + JSON.stringify(sizeSyncArr)
+				+ '}';
+			// If the client has not spawn the a player yet, it spawn first and do not move.
+			send(id, jsonStr);
+		}
 	}
 	);
 }
@@ -124,8 +124,8 @@ Scene.prototype.update = function (send) {
  * @return {Vector2}
  */
 Scene.prototype.allocatePosition = function () {
-	var x = Math.random() * this.width;
-	var y = Math.random() * this.height;
+	var x = (Math.random() - 0.5) * this.width;
+	var y = (Math.random() - 0.5) * this.height;
 	return new Vector2(x, y);
 }
 
@@ -181,8 +181,9 @@ Scene.prototype.playerMoveTo = function (id, x, y) {
 
 exports.Scene = Scene;
 
-
+/**
+ * Callback when player update its position.
+ */
 function onPlayerMove(id, position) {
-	positionUpdateList.add(id);
 	aoi_st.update(id, position.x, position.y);
 }
