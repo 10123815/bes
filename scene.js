@@ -105,7 +105,7 @@ function update(send, fr) {
 			}
 			if (player.scaled) {
 
-				// TODO(ysd): Check if some player is bigger/smaller.
+				// TODO(ysd): Check if some player is bigger.
 			}
 		}
 		if (positionSyncArr.length > 0 || sizeSyncArr.length > 0) {
@@ -164,8 +164,15 @@ Scene.prototype.addPlayer = function (name) {
 	return id;
 }
 
+/**
+ * Remove a player from the game scene when the player is eat or the connection closed.
+ * @param id {Number} ID of the removed player.
+ */
 Scene.prototype.removePlayer = function (id) {
-
+	if (players.has(id)) {
+		players.delete(id);
+		aoi_st.remove(id);
+	}
 }
 
 /**
