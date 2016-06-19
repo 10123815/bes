@@ -172,6 +172,7 @@ Scene.prototype.removePlayer = function (id) {
 	if (players.has(id)) {
 		players.delete(id);
 		aoi_st.remove(id);
+		validId.push(id);
 	}
 }
 

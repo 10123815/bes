@@ -10,12 +10,17 @@ var MAX_PLAYER = require('./define').MAX_PLAYER;
 /**
  * Buffer for the sub package problem.
  */
-var buffers = {};
+var buffers = new Map();
 
 /**
  * Socket list. {id: Socket}
  */
 var socks = new Map();
+
+/**
+ * Id list. {address+port: id}
+ */
+var ids = new Map();
 
 /**
  * App entry.
@@ -24,7 +29,7 @@ var gameScene = new Scene();
 var server = net.createServer();
 server.on('connection', onClientConnect).listen(1234);
 gameScene.start(send);
-console.log('Game start....');
+// console.log('Game start....');
 
 /**
  * Send data to a client.
@@ -38,16 +43,56 @@ function send(id, data) {
 }
 
 /**
+ * When a client leave the game.
+ */
+function clientEnd(key) {
+	if (buffers.has(key)) {
+		buffers.delete(key);
+	}
+	if (ids.has(key)) {
+		var id = ids.get(key);
+		ids.delete(key);
+		if (socks.has(id)) {
+			socks.delete(id);
+			gameScene.removePlayer(id);
+
+			// Broadcast to another client.
+			/**
+	 		 * Package structure.
+			 * {"msgtype":"close","id":"---"} server->client
+			 */
+			var jsonObj = {};
+			jsonObj.msgtype = 'close';
+			jsonObj.id = id;
+			var jsonStr = JSON.stringify(jsonObj);
+			socks.forEach(function (sock, id, map) {
+				sock.write(jsonStr);
+			});
+		}
+	}
+}
+
+/**
  * When new user connect.
  * @param {Socket} sock The connection object.
  */
 function onClientConnect(sock) {
 
-	// use the 'address:port' as the key
+	// use the 'address+port' as the key
 	var key = sock.remoteAddress + sock.remotePort;
-	if (!(key in buffers)) {
-		buffers[key] = ''
+	if (!(buffers.has(key))) {
+		buffers.set(key, '');
 	}
+
+	sock.on('end', function () {
+		var key = sock.remoteAddress + sock.remotePort;
+		clientEnd(key);
+	});
+
+	sock.on('error', function (e) {
+		var key = sock.remoteAddress + sock.remotePort;
+		clientEnd(key);
+	});
 
 	// Emitted when data is received
 	sock.on('data', function (data) {
@@ -69,26 +114,26 @@ function onClientConnect(sock) {
 			if (jsonStrs[i] != '') {
 				if (i == 0 &&
 					jsonStrs[i][0] != '{' &&
-					buffers[key] != '') {
-					var tmp = buffers[key] + jsonStrs[i]
+					buffers.get(key) != '') {
+					var tmp = buffers.get(key) + jsonStrs[i]
 					if (tmp[tmp.length - 1] == '}') {
 						// it is a completed json string, pass it to the router
 						route(tmp, sock);
-						buffers[key] = ''
+						buffers.set(key, '');
 						continue;
 					}
 					else {
 						// uncompleted json string, append to the end of the buffer
-						buffers[key] = tmp
+						buffers.set(key, tmp);
 						break;
 					}
 				}
 				if (i == jsonStrs.length - 1 &&
-					buffers[key] == '') {
+					buffers.get(key) == '') {
 					var last = jsonStrs[i].length - 1;
 					if (jsonStrs[i][last] != '}') {
 						// an uncompleted json string, write to the buffer
-						buffers[key] = jsonStrs[i]
+						buffers.set(key, jsonStrs[i]);
 						continue;
 					}
 				}
@@ -143,6 +188,8 @@ function route(data, sock) {
 
 				// Add to client sock list.
 				socks.set(playerId, sock);
+				var key = sock.remoteAddress + sock.remotePort;
+				ids.set(key, playerId);
 			}
         }
 		else if (jsonObj.msgtype == 'touch') {
