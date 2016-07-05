@@ -121,6 +121,23 @@ exports.vector2Reflect = function (light, norm) {
 }
 
 /**
+ * Triple cross of three vectors, a x b x c.
+ * @return {Vector2} A perpendicular vector of c. The vector is still on the plane of abc.
+ */
+exports.vector2TripleCross = function (a, b, c) {
+    // Perform a.dot(c)
+    var ac = a.x * c.x + a.y * c.y;
+    // Perform b.dot(c)
+    var bc = b.x * c.x + b.y * c.y;
+
+    // Perform b * a.dot(c) - a * b.dot(c)
+    x = b.x * ac - a.x * bc;
+    y = b.y * ac - a.y * bc;
+
+    return new Vector2(x, y);
+}
+
+/**
  * Multiplies two vectors component-wise.
  */
 exports.vector2Scale = function (a, b) {
