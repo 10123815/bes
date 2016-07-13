@@ -145,6 +145,8 @@ exports.vector2Scale = function (a, b) {
 }
 
 /**
- * Zero vector.
+ * Vector constance.
  */
 exports.Zero = new Vector2(0, 0);
+exports.Up = new Vector2(0, 1);
+exports.Right = new Vector2(1, 0);
